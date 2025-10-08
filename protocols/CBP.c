@@ -115,12 +115,92 @@ bool CBP(char *requete, char *reponse, int socket)
 
     if(strcmp(ptr, "GET_SPECIALTIES") == 0)
     {
+        char requeteSQL[256];
 
+        pthread_mutex_lock(&mutexDB);
+            sprintf(requeteSQL, "select * from specialties");
+
+            if(mysql_query(connexion, requeteSQL))
+            {
+                fprintf(stderr, "(SERVEUR) Erreur de requête SQL (GET_SPECIALTIES)...\n");
+                exit(1);
+            }
+
+            MYSQL_RES* resultatSQL = mysql_store_result(connexion);
+        pthread_mutex_unlock(&mutexDB);
+
+        if(resultatSQL == NULL)
+        {
+            fprintf(stderr, "(SERVEUR) Erreur de récupération du résultat SQL (GET_SPECIALTIES)...\n");
+            exit(1);
+        }
+
+        int nbLignes = mysql_num_rows(resultatSQL);
+        
+        if(nbLignes > 0)
+        {
+            strcpy(reponse, "OK");
+            for(int i=0 ; i<nbLignes ; i++)
+            {
+                MYSQL_ROW ligne = mysql_fetch_row(resultatSQL);
+                strcat(reponse, "#");
+                strcat(reponse, ligne[1]);
+            }
+        }
+        else
+        {
+            strcpy(reponse, "KO");
+        }
+
+        mysql_free_result(resultatSQL);
+
+        return true;
     }
 
     if(strcmp(ptr, "GET_DOCTORS") == 0)
     {
+        char requeteSQL[256];
 
+        pthread_mutex_lock(&mutexDB);
+            sprintf(requeteSQL, "select * from doctors");
+
+            if(mysql_query(connexion, requeteSQL))
+            {
+                fprintf(stderr, "(SERVEUR) Erreur de requête SQL (GET_DOCTORS)...\n");
+                exit(1);
+            }
+
+            MYSQL_RES* resultatSQL = mysql_store_result(connexion);
+        pthread_mutex_unlock(&mutexDB);
+
+        if(resultatSQL == NULL)
+        {
+            fprintf(stderr, "(SERVEUR) Erreur de récupération du résultat SQL (GET_DOCTORS)...\n");
+            exit(1);
+        }
+
+        int nbLignes = mysql_num_rows(resultatSQL);
+        
+        if(nbLignes > 0)
+        {
+            strcpy(reponse, "OK");
+            for(int i=0 ; i<nbLignes ; i++)
+            {
+                MYSQL_ROW ligne = mysql_fetch_row(resultatSQL);
+                strcat(reponse, "#");
+                strcat(reponse, ligne[1]);
+                strcat(reponse, " ");
+                strcat(reponse, ligne[2]);
+            }
+        }
+        else
+        {
+            strcpy(reponse, "KO");
+        }
+
+        mysql_free_result(resultatSQL);
+
+        return true;
     }
 
     if(strcmp(ptr, "SEARCH_CONSULTATIONS") == 0)
