@@ -1,0 +1,30 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}",
+                "${workspaceFolder}/../UNIX_DOSSIER_FINAL",
+                "/usr/include/qt5",
+                "/usr/include/qt5/QtWidgets",
+                "/usr/include/qt5/QtGui",
+                "/usr/include/qt5/QtCore",
+                "/usr/include/mysql",
+                "/usr/lib64/qt5/mkspecs/linux-g++"
+            ],
+            "defines": [
+                "_REENTRANT",
+                "QT_DEPRECATED_WARNINGS",
+                "QT_QML_DEBUG",
+                "QT_WIDGETS_LIB",
+                "QT_GUI_LIB",
+                "QT_CORE_LIB"
+            ],
+            "compilerPath": "/usr/bin/g++",
+            "cStandard": "c17",
+            "cppStandard": "gnu++11",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}

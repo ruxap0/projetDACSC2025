@@ -1,14 +1,34 @@
 #include "mainwindowclientconsultationbooker.h"
 #include "ui_mainwindowclientconsultationbooker.h"
 #include <QInputDialog>
+#include <sys/types.h>
+#include <sys/socket.h>
 #include <QMessageBox>
+#include <cstring>
 #include <iostream>
+#include "./protocols/lib_socket.h"
+#include <signal.h>
+#include <unistd.h>
+
 using namespace std;
+
+int sClient = -1;
+
+void handlerSIGINT(int sig);
+
 
 MainWindowClientConsultationBooker::MainWindowClientConsultationBooker(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindowClientConsultationBooker)
 {
+    // Armer SIGINT
+    struct sigaction A;
+    A.sa_flags = 0;
+    sigemptyset(&A.sa_mask);
+    A.sa_handler = handlerSIGINT;
+    sigaction(SIGINT,&A,NULL);
+
+
     ui->setupUi(this);
     logoutOk();
 
@@ -248,6 +268,7 @@ int MainWindowClientConsultationBooker::dialogInputInt(const string& title,const
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void MainWindowClientConsultationBooker::on_pushButtonLogin_clicked()
 {
+    int ret;
     string lastName = this->getLastName();
     string firstName = this->getFirstName();
     int patientId = this->getPatientId();
@@ -258,11 +279,66 @@ void MainWindowClientConsultationBooker::on_pushButtonLogin_clicked()
     cout << "patientId = " << patientId << endl;
     cout << "newPatient = " << newPatient << endl;
 
-    loginOk();
+    // Envoi d'une requete login au serveur
+    if ((sClient = ClientSocket(const_cast<char*>("127.0.0.1"), 50005)) == -1)
+    {
+        perror("Erreur de ClientSocket");
+        exit(1);
+    }
+
+    char requete[256];
+    if (newPatient)
+        sprintf(requete, "LOGIN#%s#%s#%d#NEW", lastName.c_str(), firstName.c_str(), patientId);
+    else
+        sprintf(requete, "LOGIN#%s#%s#%d#NOT", lastName.c_str(), firstName.c_str(), patientId);
+
+    char reponse[256];
+    if((ret = Send(sClient, requete, strlen(requete))) < 0)
+    {
+        perror("Erreur de Send");
+        exit(1);
+    }
+
+    if((ret = Receive(sClient, reponse)) < 0)
+    {
+        perror("Erreur de Receive");
+        exit(1);
+    }
+
+    if(strcmp(reponse, "OK") == 0)
+        loginOk();
+    else
+    {
+        dialogError("Erreur", "Login échoué");
+    }
 }
 
 void MainWindowClientConsultationBooker::on_pushButtonLogout_clicked()
 {
+    // Envoi d'une requete logout au serveur
+    if (sClient != -1)
+    {
+        char requete[256];
+        sprintf(requete, "LOGOUT");
+
+        char reponse[256];
+        int ret;
+        if((ret = Send(sClient, requete, strlen(requete))) < 0)
+        {
+            perror("Erreur de Send");
+            exit(1);
+        }
+
+        if((ret = Receive(sClient, reponse)) < 0)
+        {
+            perror("Erreur de Receive");
+            exit(1);
+        }
+
+        ::close(sClient);
+        sClient = -1;
+    }
+
     logoutOk();
 }
 
@@ -284,4 +360,14 @@ void MainWindowClientConsultationBooker::on_pushButtonReserver_clicked()
     int selectedTow = this->getSelectionIndexTableConsultations();
 
     cout << "selectedRow = " << selectedTow << endl;
+}
+
+// ----------------------------------------------------------------------//
+// ----- fonctions en + -------------------------------------------------//
+// ----------------------------------------------------------------------//
+void handlerSIGINT(int sig)
+{
+    close(sClient);
+    printf("\nFermeture du client\n");
+    exit(0);
 }
