@@ -29,15 +29,10 @@ bool CBP(char *requete, char *reponse, int socket)
     // *********************** Login *********************** //
     if(strcmp(ptr, "LOGIN") == 0)
     {
-        char* nom = strtok(NULL, "#");      // NULL pour continuer
-        char* prenom = strtok(NULL, "#");   // NULL pour continuer
-        int id = atoi(strtok(NULL, "#"));    // NULL pour continuer
+        char* nom = strtok(NULL, "#");
+        char* prenom = strtok(NULL, "#");
+        int id = atoi(strtok(NULL, "#"));
         char* isNew = strtok(NULL, "#");
-
-        printf("nom = %s\n", nom);
-        printf("prenom = %s\n", prenom);
-        printf("id = %d\n", id);
-        printf("isNew = %s\n", isNew);
         
         if(strcmp(isNew, "NEW") == 0)
         {
@@ -71,9 +66,8 @@ bool CBP(char *requete, char *reponse, int socket)
         }
         else
         {
-            // Récupérer le patient en DB pour comparer les nom/prénom et code
             char requeteSQL[256];
-            sprintf(requeteSQL, "select * from patients where id = %d, last_name = %s, first_name = %s", id, nom, prenom);
+            sprintf(requeteSQL, "select * from patients where id = %d AND last_name = '%s' AND first_name = '%s'", id, nom, prenom);
 
             pthread_mutex_lock(&mutexDB);
                 if(mysql_query(connexion, requeteSQL))
