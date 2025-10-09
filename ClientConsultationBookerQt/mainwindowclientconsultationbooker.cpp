@@ -12,6 +12,12 @@
 
 using namespace std;
 
+typedef struct {
+    int id;
+    char last_name[50];
+    char first_name[50];
+}DOCTORS;
+
 int sClient = -1;
 
 void handlerSIGINT(int sig);
@@ -49,18 +55,6 @@ MainWindowClientConsultationBooker::MainWindowClientConsultationBooker(QWidget *
     for (int col = 0; col < 5; ++col)
         ui->tableWidgetConsultations->setColumnWidth(col, columnWidths[col]);
 
-    // Exemples d'utilisation (à supprimer)
-    this->addTupleTableConsultations(1,"Neurologie","Martin Claire","2025-10-01", "09:00");
-    this->addTupleTableConsultations(2,"Cardiologie","Lemoine Bernard","2025-10-06", "10:15");
-    this->addTupleTableConsultations(3,"Dermatologie","Maboul Paul","2025-10-23", "14:30");
-
-    //this->addComboBoxSpecialties("--- TOUTES ---");
-    this->addComboBoxSpecialties("Dermatologie");
-    this->addComboBoxSpecialties("Cardiologie");
-
-    //this->addComboBoxDoctors("--- TOUS ---");
-    this->addComboBoxDoctors("Martin Claire");
-    this->addComboBoxDoctors("Maboul Paul");
 }
 
 MainWindowClientConsultationBooker::~MainWindowClientConsultationBooker()
@@ -219,6 +213,85 @@ void MainWindowClientConsultationBooker::loginOk() {
     ui->pushButtonLogin->setEnabled(false);
     ui->pushButtonRechercher->setEnabled(true);
     ui->pushButtonReserver->setEnabled(true);
+
+    int ret;
+    char requete[256];
+    char reponse[256];
+
+    sprintf(requete, "GET_SPECIALTIES");
+    if((ret = Send(sClient, requete, strlen(requete))) < 0)
+    {
+        perror("Erreur de Send");
+        exit(1);
+    }
+
+    if((ret = Receive(sClient, reponse)) < 0)
+    {
+        perror("Erreur de Receive");
+        exit(1);
+    }
+
+    char* ptr = strtok(reponse, "#");
+
+    if(strcmp(ptr, "OK") == 0)
+    {
+        int i = 0;
+        clearComboBoxSpecialties();
+        while((ptr = strtok(NULL, "#")) != NULL)
+        {
+            if(i % 2 == 1)
+                this->addComboBoxSpecialties(string(ptr));
+            i++;
+        }
+    }
+    else
+    {
+        dialogError("Erreur", "Récupération des spécialités échouée");
+    }
+
+    sprintf(requete, "GET_DOCTORS");
+    if((ret = Send(sClient, requete, strlen(requete))) < 0)
+    {
+        perror("Erreur de Send");
+        exit(1);
+    }
+
+    if((ret = Receive(sClient, reponse)) < 0)
+    {
+        perror("Erreur de Receive");
+        exit(1);
+    }
+
+    ptr = strtok(reponse, "#");
+
+    if(strcmp(ptr, "OK") == 0)
+    {
+        int i = 0;
+        clearComboBoxDoctors();
+        while((ptr = strtok(NULL, "#")) != NULL)
+        {
+            if(i % 2 == 1)
+            {
+                char doctor[100] = "";
+                strcpy(doctor, ptr);
+                strcat(doctor, " ");
+                strcat(doctor, strtok(NULL, "#"));
+                cout << "doctor = " << doctor << endl;
+
+                this->addComboBoxDoctors(string(doctor));
+            }
+            i++;
+
+        }
+    }
+    else
+    {
+        dialogError("Erreur", "Récupération des médecins échouée");
+    }
+
+
+
+
 }
 
 void MainWindowClientConsultationBooker::logoutOk() {

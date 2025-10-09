@@ -189,8 +189,10 @@ bool CBP(char *requete, char *reponse, int socket)
                 MYSQL_ROW ligne = mysql_fetch_row(resultatSQL);
                 strcat(reponse, "#");
                 strcat(reponse, ligne[1]);
-                strcat(reponse, " ");
+                strcat(reponse, "#");
                 strcat(reponse, ligne[2]);
+                strcat(reponse, "#");
+                strcat(reponse, ligne[3]);
             }
         }
         else
