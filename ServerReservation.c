@@ -86,7 +86,6 @@ void traitementConnexion(int sService)
     char requete[256];
     char reponse[256];
     int ret;
-
     while(1)
     {
         if((ret = Receive(sService, requete)) < 0)
@@ -98,14 +97,12 @@ void traitementConnexion(int sService)
             return;
 
         printf("Requête reçue : %s\n", requete);
-
         if(CBP(requete, reponse, sService) == false) // requête inconnue
         {
             strcpy(reponse, "KO");
         }
-
+        
         printf("Réponse envoyée : %s\n", reponse);
-
         if((ret = Send(sService, reponse, strlen(reponse))) < 0)
         {
             perror("Erreur de Send");
@@ -113,9 +110,6 @@ void traitementConnexion(int sService)
         }
     }
 }
-
-
-
 
 // --------------------------------------------------------------------------------------------------------------//
 

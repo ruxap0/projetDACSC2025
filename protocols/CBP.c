@@ -110,7 +110,7 @@ bool CBP(char *requete, char *reponse, int socket)
         // le retirer de la liste des clients loggés
         retire(socket);
         strcpy(reponse, "OK");
-        return true;
+        return false;
     }
 
     if(strcmp(ptr, "GET_SPECIALTIES") == 0)
@@ -118,7 +118,7 @@ bool CBP(char *requete, char *reponse, int socket)
         char requeteSQL[256];
 
         pthread_mutex_lock(&mutexDB);
-            sprintf(requeteSQL, "select * from specialties");
+            sprintf(requeteSQL, "select id, name from specialties");
 
             if(mysql_query(connexion, requeteSQL))
             {
@@ -128,6 +128,8 @@ bool CBP(char *requete, char *reponse, int socket)
 
             MYSQL_RES* resultatSQL = mysql_store_result(connexion);
         pthread_mutex_unlock(&mutexDB);
+
+        printf("Requête SQL : %s\n", requeteSQL);
 
         if(resultatSQL == NULL)
         {
@@ -144,6 +146,8 @@ bool CBP(char *requete, char *reponse, int socket)
             {
                 MYSQL_ROW ligne = mysql_fetch_row(resultatSQL);
                 strcat(reponse, "#");
+                strcat(reponse, ligne[0]);
+                strcat(reponse, "#");
                 strcat(reponse, ligne[1]);
             }
         }
@@ -151,6 +155,8 @@ bool CBP(char *requete, char *reponse, int socket)
         {
             strcpy(reponse, "KO");
         }
+
+        printf("Réponse : %s\n", reponse);
 
         mysql_free_result(resultatSQL);
 
@@ -207,7 +213,76 @@ bool CBP(char *requete, char *reponse, int socket)
 
     if(strcmp(ptr, "SEARCH_CONSULTATIONS") == 0)
     {
+        char* specialty = strtok(NULL, "#");
+        char* doctor = strtok(NULL, "#");
+        char* startDate = strtok(NULL, "#");
+        char* endDate = strtok(NULL, "#");
 
+        char requeteSQL[512];
+        sprintf(requeteSQL, ""
+            "SELECT c.id, s.name, CONCAT(d.last_name, ' ', d.first_name), c.date, c.hour "
+            "FROM consultations c "
+            "JOIN doctors d ON c.doctor_id = d.id "
+            "JOIN specialties s ON d.specialty_id = s.id "
+            "WHERE c.patient_id IS NULL "
+            "AND c.date BETWEEN '%s' AND '%s'", startDate, endDate);
+        
+        if(strcmp(specialty, "--- TOUTES ---") != 0)
+            strcat(requeteSQL, " AND s.name = '"), strcat(requeteSQL, specialty), strcat(requeteSQL, "'");
+        
+        if(strcmp(doctor, "--- TOUS ---") != 0)
+            strcat(requeteSQL, " AND CONCAT(d.last_name, ' ', d.first_name) = '"), strcat(requeteSQL, doctor), strcat(requeteSQL, "'");
+
+        printf("Requête SQL : %s\n", requeteSQL);
+
+        pthread_mutex_lock(&mutexDB);
+            if(mysql_query(connexion, requeteSQL))
+            {
+                fprintf(stderr, "(SERVEUR) Erreur de requête SQL (SEARCH_CONSULTATIONS)...\n");
+                strcpy(reponse, "KO");
+                pthread_mutex_unlock(&mutexDB);
+                return false;
+            }
+
+            MYSQL_RES* resultatSQL = mysql_store_result(connexion);
+        pthread_mutex_unlock(&mutexDB);
+
+        if(resultatSQL == NULL)
+        {
+            fprintf(stderr, "(SERVEUR) Erreur de récupération du résultat SQL (SEARCH_CONSULTATIONS)...\n");
+            exit(1);
+        }
+
+        int nbLignes = mysql_num_rows(resultatSQL);
+        
+        if(nbLignes > 0)
+        {
+            memset(reponse, 0, 256);
+            strcpy(reponse, "OK");
+            for(int i=0 ; i<nbLignes ; i++)
+            {
+                MYSQL_ROW ligne = mysql_fetch_row(resultatSQL);
+                strcat(reponse, "#");
+                strcat(reponse, ligne[0]);
+                strcat(reponse, "#");
+                strcat(reponse, ligne[1]);
+                strcat(reponse, "#");
+                strcat(reponse, ligne[2]);
+                strcat(reponse, "#");
+                strcat(reponse, ligne[3]);
+                strcat(reponse, "#");
+                strcat(reponse, ligne[4]);
+            }
+        }
+        else
+        {
+            strcpy(reponse, "KO");
+            return false;
+        }
+
+        mysql_free_result(resultatSQL);
+
+        return true;
     }
 
     if(strcmp(ptr, "BOOK_CONSULTATION") == 0)

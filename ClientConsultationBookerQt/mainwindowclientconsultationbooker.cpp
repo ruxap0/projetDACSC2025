@@ -204,7 +204,7 @@ void MainWindowClientConsultationBooker::setEndDate(string date) {
     if (qdate.isValid()) ui->dateEditEndDate->setDate(qdate);
 }
 
-void MainWindowClientConsultationBooker::loginOk() {
+void MainWindowClientConsultationBooker::loginOk() { // à refactor
     ui->lineEditLastName->setReadOnly(true);
     ui->lineEditFirstName->setReadOnly(true);
     ui->spinBoxId->setReadOnly(true);
@@ -237,11 +237,16 @@ void MainWindowClientConsultationBooker::loginOk() {
     {
         int i = 0;
         clearComboBoxSpecialties();
+        
         while((ptr = strtok(NULL, "#")) != NULL)
         {
+            cout << "specialty = " << ptr << endl;
             if(i % 2 == 1)
+            {
                 this->addComboBoxSpecialties(string(ptr));
+            }
             i++;
+
         }
     }
     else
@@ -421,11 +426,47 @@ void MainWindowClientConsultationBooker::on_pushButtonRechercher_clicked()
     string doctor = this->getSelectionDoctor();
     string startDate = this->getStartDate();
     string endDate = this->getEndDate();
-
     cout << "specialty = " << specialty << endl;
     cout << "doctor = " << doctor << endl;
     cout << "startDate = " << startDate << endl;
     cout << "endDate = " << endDate << endl;
+    if(sClient != -1)
+    {
+        char requete[512];
+        sprintf(requete, "SEARCH_CONSULTATIONS#%s#%s#%s#%s", specialty.c_str(), doctor.c_str(), startDate.c_str(), endDate.c_str());
+        char reponse[1024];
+        int ret;
+        if((ret = Send(sClient, requete, strlen(requete))) < 0)
+        {
+            perror("Erreur de Send");
+            exit(1);
+        }
+        if((ret = Receive(sClient, reponse)) < 0)
+        {
+            perror("Erreur de Receive");
+            exit(1);
+        }
+        char* ptr = strtok(reponse, "#");
+        if(strcmp(ptr, "OK") == 0)
+        {
+            int i = 0;
+            clearTableConsultations();
+            while((ptr = strtok(NULL, "#")) != NULL)
+            {
+                int id = atoi(ptr);
+                string specialty = string(strtok(NULL, "#"));
+                string doctor = string(strtok(NULL, "#"));
+                string date = string(strtok(NULL, "#"));
+                string hour = string(strtok(NULL, "#"));
+                this->addTupleTableConsultations(id, specialty, doctor, date, hour);
+                i++;
+            }
+        }
+        else
+        {
+            dialogError("Erreur", "Recherche des consultations échouée");
+        }
+    }
 }
 
 void MainWindowClientConsultationBooker::on_pushButtonReserver_clicked()
