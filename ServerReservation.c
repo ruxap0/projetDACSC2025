@@ -88,6 +88,8 @@ void traitementConnexion(int sService)
     int ret;
     while(1)
     {
+        memset(reponse, 0, 256);
+
         if((ret = Receive(sService, requete)) < 0)
         {
             perror("Erreur de Receive");
@@ -101,7 +103,7 @@ void traitementConnexion(int sService)
         {
             strcpy(reponse, "KO");
         }
-        
+
         printf("Réponse envoyée : %s\n", reponse);
         if((ret = Send(sService, reponse, strlen(reponse))) < 0)
         {

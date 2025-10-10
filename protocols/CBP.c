@@ -287,7 +287,53 @@ bool CBP(char *requete, char *reponse, int socket)
 
     if(strcmp(ptr, "BOOK_CONSULTATION") == 0)
     {
+        int idConsultation = atoi(strtok(NULL, "#"));
+        int idPatient = atoi(strtok(NULL, "#"));
+        char* reason = strtok(NULL, "#");
 
+        // vérifier que la consultation est toujours dispo
+        char requeteSQL[256];
+        sprintf(requeteSQL, "select * from consultations where id = %d AND patient_id IS NULL", idConsultation);
+
+        pthread_mutex_lock(&mutexDB);
+            if(mysql_query(connexion, requeteSQL))
+            {
+                fprintf(stderr, "(SERVEUR) Erreur de requête SQL (BOOK_CONSULTATION)...\n");
+                strcpy(reponse, "KO");
+                pthread_mutex_unlock(&mutexDB);
+                return false;
+            }
+
+            MYSQL_RES* resultatSQL = mysql_store_result(connexion);
+        pthread_mutex_unlock(&mutexDB);
+
+        if(resultatSQL == NULL)
+        {
+            fprintf(stderr, "(SERVEUR) Erreur de récupération du résultat SQL (BOOK_CONSULTATION)...\n");
+            return false;
+        }
+
+        if(mysql_num_rows(resultatSQL) == 0)
+        {
+            mysql_free_result(resultatSQL);
+            return false;
+        }
+
+        mysql_free_result(resultatSQL);
+
+        sprintf(requeteSQL, "update consultations set patient_id = %d, reason = '%s' where id = %d", idPatient, reason, idConsultation);
+
+        pthread_mutex_lock(&mutexDB);
+            if(mysql_query(connexion, requeteSQL))
+            {
+                fprintf(stderr, "(SERVEUR) Erreur de requête SQL (BOOK_CONSULTATION)...\n");
+                pthread_mutex_unlock(&mutexDB);
+                return false;
+            }
+        pthread_mutex_unlock(&mutexDB);
+
+        strcpy(reponse, "OK");
+        return true;
     }
 
     return false;

@@ -474,6 +474,49 @@ void MainWindowClientConsultationBooker::on_pushButtonReserver_clicked()
     int selectedTow = this->getSelectionIndexTableConsultations();
 
     cout << "selectedRow = " << selectedTow << endl;
+
+    if(selectedTow == -1)
+    {
+        dialogError("Erreur", "Aucune consultation sélectionnée");
+        return;
+    }
+
+    string reasonStr = this->dialogInputText("Raison de la consultation", "Entrez la raison de la consultation :");
+
+    if(reasonStr.empty())
+        reasonStr = "Checkup";
+
+    int idConsultation = atoi(ui->tableWidgetConsultations->item(selectedTow, 0)->text().toStdString().c_str());
+
+    if(sClient != -1)
+    {
+        char requete[512];
+        sprintf(requete, "BOOK_CONSULTATION#%d#%d#%s", idConsultation, this->getPatientId(), reasonStr.c_str());
+
+        int ret;
+        if((ret = Send(sClient, requete, strlen(requete))) < 0)
+        {
+            perror("Erreur de Send");
+            exit(1);
+        }
+
+        char reponse[32];
+        if((ret = Receive(sClient, reponse)) < 0)
+        {
+            perror("Erreur de Receive");
+            exit(1);
+        }
+
+        if(strcmp(reponse, "OK") == 0)
+        {
+            dialogMessage("Succès", "Consultation réservée avec succès");
+            this->on_pushButtonRechercher_clicked();
+        }
+        else
+        {
+            dialogError("Erreur", "Réservation de la consultation échouée");
+        }
+    }
 }
 
 // ----------------------------------------------------------------------//
