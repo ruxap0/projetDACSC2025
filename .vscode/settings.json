@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "fstream": "cpp",
-        "signal.h": "c"
+        "signal.h": "c",
+        "lib_socket.h": "c"
     }
 }

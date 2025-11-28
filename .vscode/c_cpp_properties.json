@@ -4,7 +4,6 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}",
-                "${workspaceFolder}/../UNIX_DOSSIER_FINAL",
                 "/usr/include/qt5",
                 "/usr/include/qt5/QtWidgets",
                 "/usr/include/qt5/QtGui",

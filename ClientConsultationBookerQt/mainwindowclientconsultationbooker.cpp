@@ -358,7 +358,7 @@ void MainWindowClientConsultationBooker::on_pushButtonLogin_clicked()
     cout << "newPatient = " << newPatient << endl;
 
     // Envoi d'une requete login au serveur
-    if ((sClient = ClientSocket(const_cast<char*>("127.0.0.1"), 50005)) == -1)
+    if ((sClient = ClientSocket(const_cast<char*>("192.168.253.128"), 50005)) == -1)
     {
         perror("Erreur de ClientSocket");
         exit(1);

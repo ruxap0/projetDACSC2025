@@ -14,8 +14,8 @@ all: $(PROGRAMS)
 ClientWindow: $(OBJECTSPATH)mainclient.o $(OBJECTSPATH)mainwindowclientconsultationbooker.o $(OBJECTSPATH)moc_mainwindowclientconsultationbooker.o $(OBJECTSPATH)lib_socket.o
 	g++ -Wno-unused-parameter -o ClientWindow $(OBJECTSPATH)mainclient.o $(OBJECTSPATH)mainwindowclientconsultationbooker.o $(OBJECTSPATH)moc_mainwindowclientconsultationbooker.o $(OBJECTSPATH)lib_socket.o /usr/lib64/libQt5Widgets.so /usr/lib64/libQt5Gui.so /usr/lib64/libQt5Core.so /usr/lib64/libGL.so -lpthread
 
-Serveur: $(OBJECTSPATH)Serveur.o $(OBJECTSPATH)lib_socket.o $(OBJECTSPATH)CBP.o
-	g++ -Wno-unused-parameter -o Serveur $(OBJECTSPATH)Serveur.o $(OBJECTSPATH)lib_socket.o $(OBJECTSPATH)CBP.o -I/usr/include/mysql -L/usr/lib64/mysql -lmysqlclient -lpthread
+Serveur: $(OBJECTSPATH)Serveur.o $(OBJECTSPATH)lib_socket.o $(OBJECTSPATH)CBP.o $(OBJECTSPATH)ACBP.o
+	g++ -Wno-unused-parameter -o Serveur $(OBJECTSPATH)Serveur.o $(OBJECTSPATH)lib_socket.o $(OBJECTSPATH)CBP.o  $(OBJECTSPATH)ACBP.o -I/usr/include/mysql -L/usr/lib64/mysql -lmysqlclient -lpthread
 
 $(OBJECTSPATH)mainclient.o: $(CLIENTPATH)main.cpp
 	g++ -Wno-unused-parameter -c -pipe -g -std=gnu++11 -Wall -W -D_REENTRANT -fPIC -DQT_DEPRECATED_WARNINGS -DQT_QML_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -I../UNIX_DOSSIER_FINAL -I. -isystem /usr/include/qt5 -isystem /usr/include/qt5/QtWidgets -isystem /usr/include/qt5/QtGui -isystem /usr/include/qt5/QtCore -I. -I. -I/usr/lib64/qt5/mkspecs/linux-g++ -o $(OBJECTSPATH)mainclient.o $(CLIENTPATH)main.cpp
@@ -35,6 +35,8 @@ $(OBJECTSPATH)lib_socket.o: $(PROTOCOLSPATH)lib_socket.c
 $(OBJECTSPATH)CBP.o : $(PROTOCOLSPATH)CBP.c
 	g++ -Wno-unused-parameter -c -pipe -g -std=gnu++11 -Wall -W -D_REENTRANT -fPIC -DQT_DEPRECATED_WARNINGS -DQT_QML_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -I../UNIX_DOSSIER_FINAL -I. -isystem /usr/include/qt5 -isystem /usr/include/qt5/QtWidgets -isystem /usr/include/qt5/QtGui -isystem /usr/include/qt5/QtCore -I. -I. -I/usr/lib64/qt5/mkspecs/linux-g++ -I/usr/include/mysql -o $(OBJECTSPATH)CBP.o $(PROTOCOLSPATH)CBP.c
 
+$(OBJECTSPATH)ACBP.o : $(PROTOCOLSPATH)ACBP.c
+	g++ -Wno-unused-parameter -c -pipe -g -std=gnu++11 -Wall -W -D_REENTRANT -fPIC -DQT_DEPRECATED_WARNINGS -DQT_QML_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -I../UNIX_DOSSIER_FINAL -I. -isystem /usr/include/qt5 -isystem /usr/include/qt5/QtWidgets -isystem /usr/include/qt5/QtGui -isystem /usr/include/qt5/QtCore -I. -I. -I/usr/lib64/qt5/mkspecs/linux-g++ -I/usr/include/mysql -o $(OBJECTSPATH)ACBP.o $(PROTOCOLSPATH)ACBP.c
 clean:
 	echo Nettoyage des fichiers temporaires
 	rm -f $(OBJECTS) $(PROGRAMS)

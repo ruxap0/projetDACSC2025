@@ -27,7 +27,7 @@ int ServerSocket(int port)
     memset(&hints,0,sizeof(struct addrinfo));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_NUMERICSERV | AI_NUMERICHOST;
+    hints.ai_flags = AI_NUMERICSERV | AI_PASSIVE;
     
     if (getaddrinfo(NULL, ptr,&hints,&results) != 0)
     {
