@@ -26,22 +26,19 @@ bool ACBP(char* requete, char* reponse, int socket)
             
             for(int i = 0; i < nb_clients; i++)
             {
-                // Formater l'heure de connexion
-                char timeStr[64];
-                struct tm *tm_info = localtime(&clients_connectes[i]->connectionTime);
-                strftime(timeStr, sizeof(timeStr), "%H:%M:%S", tm_info);
-                
-                // Construire la ligne pour ce client
-                // Format: #IP#Nom#Prénom#ID#Logged#Heure
-                sprintf(buffer, "#%s#%s#%s#%d#%s#%s",
-                    clients_connectes[i]->ip,
-                    clients_connectes[i]->lastName,
-                    clients_connectes[i]->firstName,
-                    clients_connectes[i]->patientId,
-                    clients_connectes[i]->isLogged ? "OUI" : "NON",
-                    timeStr);
-                
-                strcat(reponse, buffer);
+                sprintf(buffer, "%d", clients_connectes[i]->patientId);
+                buffer[sizeof(buffer)-1] = '\0';
+                if(strcmp(clients_connectes[i]->ip, "?") != 0)
+                {
+                    strcat(reponse, "#");
+                    strcat(reponse, clients_connectes[i]->ip);
+                    strcat(reponse, "#");
+                    strcat(reponse, clients_connectes[i]->lastName);
+                    strcat(reponse, "#");
+                    strcat(reponse, clients_connectes[i]->firstName);
+                    strcat(reponse, "#");
+                    strcat(reponse, buffer);
+                }
             }
         }
         else
@@ -52,8 +49,6 @@ bool ACBP(char* requete, char* reponse, int socket)
         pthread_mutex_unlock(&mutex_clients_connectes);
         return true;
     }
-    
-    // Autres commandes ACBP à ajouter ici...
     
     return false;
 }

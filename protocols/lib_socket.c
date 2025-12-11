@@ -61,16 +61,20 @@ int Accept(int sEcoute,char *ipClient)
     char host[NI_MAXHOST];
     char port[NI_MAXSERV];
 
-    if((socService = accept(sEcoute, NULL, NULL)) == -1)
+    if((socService = accept(sEcoute, (struct sockaddr*)&adrClient, &adrClientLen)) == -1)
     {
         perror("Erreur de accept()");
         exit(1);
     }
 
-    // Recuperation d'information sur le client connecte     
-    getpeername(socService,(struct sockaddr*)ipClient,&adrClientLen);
-    getnameinfo((struct sockaddr*)ipClient ,adrClientLen, host,NI_MAXHOST, port,NI_MAXSERV, NI_NUMERICSERV | NI_NUMERICHOST);
-
+    // récup de l'adresse IP : 
+    if(getnameinfo((struct sockaddr*)&adrClient, adrClientLen, host, NI_MAXHOST, port, NI_MAXSERV, NI_NUMERICHOST | NI_NUMERICSERV) != 0)
+    {
+        perror("Erreur de getnameinfo()");
+        close(socService);
+        exit(1);
+    }
+    strcpy(ipClient, host);
     return socService;
 }
 

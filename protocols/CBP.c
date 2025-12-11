@@ -9,78 +9,96 @@
 #include <mysql.h>
 #include "CBP.h"
 
-/*
-  Important: connexion is defined in the server (ServerReservation.c).
-  Here we only declare it extern so there's a single definition at link time.
-*/
 extern MYSQL* connexion;
 
-/* Clients management (full CONNECTED_CLIENT objects) */
-CONNECTED_CLIENT* clients_connectes[NB_MAX_CLIENTS]; // infos complètes
+CONNECTED_CLIENT* clients_connectes[NB_MAX_CLIENTS];
 int nb_clients = 0;
 pthread_mutex_t mutex_clients_connectes = PTHREAD_MUTEX_INITIALIZER;
 
-/* ***** Etat du protocole : liste des clients loggés (sockets) ***** */
-int clients[NB_MAX_CLIENTS]; // -> sockets
+int clients[NB_MAX_CLIENTS];
 int nbClients = 0;
 int estPresent(int socket);
 int estPresentDB(int id);
 void ajoute(int socket);
 void retire(int socket);
 
-/* mutexs pour DB / sockets (keep these as before) */
 pthread_mutex_t mutexDB = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexClientsSockets = PTHREAD_MUTEX_INITIALIZER;
 
-/* ----------------- Implementation of functions referenced by server ----------------- */
-
-/* Add a CONNECTED_CLIENT entry (used by acceptor in server) */
 void ajouterClient(int socket, const char* ip, const char* lastName, const char* firstName, int patientId)
 {
     pthread_mutex_lock(&mutex_clients_connectes);
-        if(nb_clients < NB_MAX_CLIENTS)
+    if(nb_clients < NB_MAX_CLIENTS)
+    {
+        CONNECTED_CLIENT* c = (CONNECTED_CLIENT*)malloc(sizeof(CONNECTED_CLIENT));
+        if(c == NULL) { perror("malloc"); exit(1); }
+        
+        // Toujours initialiser la socket
+        c->socket = socket;
+        
+        // Initialiser l'IP
+        if(strcmp(ip, "?") != 0)
         {
-            CONNECTED_CLIENT* c = (CONNECTED_CLIENT*)malloc(sizeof(CONNECTED_CLIENT));
-            if(c == NULL) { perror("malloc"); exit(1); }
-            c->socket = socket;
-            c->ip[0] = '\0';
-            if(ip) strncpy(c->ip, ip, sizeof(c->ip)-1);
+            strncpy(c->ip, ip, sizeof(c->ip)-1);
             c->ip[sizeof(c->ip)-1] = '\0';
-            c->patientId = patientId;
-            c->isLogged = false;
-            c->lastName[0] = '\0';
-            c->firstName[0] = '\0';
-            if(lastName) strncpy(c->lastName, lastName, sizeof(c->lastName)-1);
-            if(firstName) strncpy(c->firstName, firstName, sizeof(c->firstName)-1);
-            c->lastName[sizeof(c->lastName)-1] = '\0';
-            c->firstName[sizeof(c->firstName)-1] = '\0';
-
-            clients_connectes[nb_clients++] = c;
         }
         else
         {
-            fprintf(stderr, "(CBP) Trop de clients connectés, rejet socket %d\n", socket);
+            c->ip[0] = '\0';
         }
+        
+        // Initialiser patientId
+        c->patientId = patientId;
+        
+        // Initialiser les noms
+        if(strcmp(lastName, "?") != 0)
+        {
+            strncpy(c->lastName, lastName, sizeof(c->lastName)-1);
+            c->lastName[sizeof(c->lastName)-1] = '\0';
+            strncpy(c->firstName, firstName, sizeof(c->firstName)-1);
+            c->firstName[sizeof(c->firstName)-1] = '\0';
+        }
+        else
+        {
+            c->lastName[0] = '\0';
+            c->firstName[0] = '\0';
+        }
+
+        // Trouver un emplacement libre
+        for(int i = 0; i < NB_MAX_CLIENTS; i++)
+        {
+            if(clients_connectes[i] == NULL)
+            {
+                clients_connectes[i] = c;
+                nb_clients++;
+                break;
+            }
+        }
+    }
+    else
+    {
+        fprintf(stderr, "(CBP) Trop de clients connectés, rejet socket %d\n", socket);
+    }
     pthread_mutex_unlock(&mutex_clients_connectes);
 }
 
-/* Remove a CONNECTED_CLIENT by socket (used by server on disconnect) */
-void retirerClient(int socket)
+void mettreAJourClient(int socket, const char* lastName, const char* firstName, int patientId)
 {
     pthread_mutex_lock(&mutex_clients_connectes);
-        int pos = -1;
-        for(int i=0; i<nb_clients; i++)
+    for(int i = 0; i < NB_MAX_CLIENTS; i++)
+    {
+        if(clients_connectes[i] != NULL && clients_connectes[i]->socket == socket)
         {
-            if(clients_connectes[i] && clients_connectes[i]->socket == socket) { pos = i; break; }
+            strncpy(clients_connectes[i]->lastName, lastName, sizeof(clients_connectes[i]->lastName)-1);
+            clients_connectes[i]->lastName[sizeof(clients_connectes[i]->lastName)-1] = '\0';
+            
+            strncpy(clients_connectes[i]->firstName, firstName, sizeof(clients_connectes[i]->firstName)-1);
+            clients_connectes[i]->firstName[sizeof(clients_connectes[i]->firstName)-1] = '\0';
+            
+            clients_connectes[i]->patientId = patientId;
+            break;
         }
-        if(pos != -1)
-        {
-            free(clients_connectes[pos]);
-            for(int i=pos; i<nb_clients-1; i++)
-                clients_connectes[i] = clients_connectes[i+1];
-            clients_connectes[nb_clients-1] = NULL;
-            nb_clients--;
-        }
+    }
     pthread_mutex_unlock(&mutex_clients_connectes);
 }
 
@@ -135,20 +153,15 @@ bool CBP(char *requete, char *reponse, int socket)
                     }
                 pthread_mutex_unlock(&mutexDB);
 
-                pthread_mutex_lock(&mutex_clients_connectes);
-                    int pos = trouverClientParSocket(socket);
-                    if(pos != -1) {
-                        strncpy(clients_connectes[pos]->lastName, nom, sizeof(clients_connectes[pos]->lastName)-1);
-                        strncpy(clients_connectes[pos]->firstName, prenom, sizeof(clients_connectes[pos]->firstName)-1);
-                        clients_connectes[pos]->patientId = id;
-                        clients_connectes[pos]->isLogged = true;
-                    }
-                pthread_mutex_unlock(&mutex_clients_connectes);
+                mettreAJourClient(socket, nom, prenom, id);
                     
                 strcpy(reponse, "OK");
                 // ajouter dans liste sockets si nécessaire
                 if(estPresent(socket) == -1)
+                {
+                    ajouterClient(-2, "?", nom, prenom, id);
                     ajoute(socket);
+                }
                 return true;
             }
         }
@@ -178,6 +191,7 @@ bool CBP(char *requete, char *reponse, int socket)
 
             if(mysql_num_rows(resultatSQL) > 0)
             {
+                mettreAJourClient(socket, nom, prenom, id);
                 // l'ajouter dans la liste des clients loggés
                 if(estPresent(socket) == -1)
                     ajoute(socket);
@@ -197,7 +211,6 @@ bool CBP(char *requete, char *reponse, int socket)
 
     if(strcmp(ptr, "LOGOUT") == 0)
     {
-        // le retirer de la liste des clients loggés
         retire(socket);
         strcpy(reponse, "OK");
         return false;
@@ -463,6 +476,24 @@ void retire(int socket)
             clients[i] = clients[i+1];
         nbClients--;
     pthread_mutex_unlock(&mutexClientsSockets);
+}
+
+void retirerClient(int socket)
+{
+    retire(socket);
+
+    pthread_mutex_lock(&mutex_clients_connectes);
+        for(int i = 0; i < NB_MAX_CLIENTS; i++)
+        {
+            if(clients_connectes[i] != NULL && clients_connectes[i]->socket == socket)
+            {
+                free(clients_connectes[i]);
+                clients_connectes[i] = NULL;
+                nb_clients--;
+                break;
+            }
+        }
+    pthread_mutex_unlock(&mutex_clients_connectes);
 }
 
 int estPresentDB(int id)

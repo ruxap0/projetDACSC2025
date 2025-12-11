@@ -12,7 +12,6 @@ typedef struct {
     char lastName[64];
     char firstName[64];
     int patientId;
-    int isLogged;
     time_t connectionTime;
 } CONNECTED_CLIENT;
 
@@ -26,6 +25,7 @@ extern int nb_clients;
 extern pthread_mutex_t mutex_clients_connectes;
 
 void ajouterClient(int socket, const char* ip, const char* lastName, const char* firstName, int patientId);
+void mettreAJourClient(int socket, const char* lastName, const char* firstName, int patientId);
 void retirerClient(int socket);
 int trouverClientParSocket(int socket);
 

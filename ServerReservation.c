@@ -133,18 +133,16 @@ void* fctThreadCBP(void* param)
 
         printf("Connexion CBP acceptée avec %s sur socket %d\n", ipClient, sService_cbp);
 
-        // Ajouter le client à la liste des clients connectés
+
         ajouterClient(sService_cbp, ipClient, "?", "?", -1);
 
         // Ajouter la socket à la file d'attente pour les workers
-        pthread_mutex_lock(&mutex_file_sockets);
-        
-        sockets_clients[indice_ecriture] = sService_cbp;
-        indice_ecriture = (indice_ecriture + 1) % NB_MAX_CLIENTS;
-        
-        // Signaler qu'un nouveau client est disponible
-        pthread_cond_signal(&cond_client_accept);
-        
+        pthread_mutex_lock(&mutex_file_sockets);        
+            sockets_clients[indice_ecriture] = sService_cbp;
+            indice_ecriture = (indice_ecriture + 1) % NB_MAX_CLIENTS;
+            
+            // Signaler qu'un nouveau client est disponible
+            pthread_cond_signal(&cond_client_accept);
         pthread_mutex_unlock(&mutex_file_sockets);
     }
 
@@ -243,6 +241,7 @@ void traitementConnexion(int sService)
         }
 
         printf("[Socket %d] Requête reçue : %s\n", sService, requete);
+        ajouterClient(sService, "?", "?", "?", -1); 
         
         if(CBP(requete, reponse, sService) == false)
         {
@@ -269,21 +268,35 @@ void traitementConnexion(int sService)
 void traitementConnexionACBP(int sService)
 {
     char requete[256];
-    char reponse[1024]; // Plus grand pour la liste des clients
+    char reponse[1024];
     int ret;
 
+    memset(requete, 0, sizeof(requete));
     memset(reponse, 0, sizeof(reponse));
 
+    printf("DEBUG: Avant Receive ACBP...\n");
+    
     if((ret = Receive(sService, requete)) < 0)
     {
         perror("Erreur de Receive ACBP");
         return;
     }
     
-    if(ret == 0) // client déconnecté immédiatement
+    printf("DEBUG: Après Receive, ret=%d\n", ret);
+    
+    if(ret == 0)
+    {
+        printf("DEBUG: Client déconnecté immédiatement\n");
         return;
+    }
 
-    printf("Requête ACBP reçue : %s\n", requete);
+    printf("DEBUG: Requête ACBP reçue (longueur=%d) : '%s'\n", ret, requete);
+    
+    // Afficher en hexadécimal pour voir le format exact
+    printf("DEBUG: Hex: ");
+    for(int i = 0; i < ret && i < 20; i++)
+        printf("%02X ", (unsigned char)requete[i]);
+    printf("\n");
     
     if(ACBP(requete, reponse, sService) == false)
     {
@@ -297,6 +310,8 @@ void traitementConnexionACBP(int sService)
         perror("Erreur de Send ACBP");
         return;
     }
+    
+    printf("DEBUG: Réponse envoyée avec succès\n");
 }
 
 // Lecture du fichier de configuration
